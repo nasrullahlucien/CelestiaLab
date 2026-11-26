@@ -1,0 +1,588 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Design Tokens, Theme Variables & Coordinate System Palette (WCAG AA+)
+   ========================================================================== */
+
+:root {
+  /* Keep root color-scheme synced with <meta name="color-scheme"> */
+  color-scheme: light dark;
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+  }
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+  }
+
+  /* Responsive target sizes (WCAG 2.5.8 & 2.5.5) */
+  --target-size: 24px;
+
+  /* Raw Light / Dark Surface & Ink Tokens */
+  --bg-page-light: #f8fafc;
+  --bg-page-dark: #070b14;
+  --bg-surface-light: #ffffff;
+  --bg-surface-dark: #0f172a;
+  --bg-subtle-light: #f1f5f9;
+  --bg-subtle-dark: #162033;
+  --bg-elevated-light: #ffffff;
+  --bg-elevated-dark: #1e293b;
+
+  --text-primary-light: #0f172a;
+  --text-primary-dark: #f8fafc;
+  --text-secondary-light: #334155;
+  --text-secondary-dark: #cbd5e1;
+  --text-muted-light: #475569;
+  --text-muted-dark: #94a3b8;
+
+  --border-default-light: #cbd5e1;
+  --border-default-dark: #334155;
+  --border-strong-light: #64748b;
+  --border-strong-dark: #64748b;
+
+  /* Coordinate System Colors — Calibrated for WCAG AA Contrast
+     Horizon (เขียว):     Light #047857 (5.48:1 on #fff) | Dark #34d399 (10.1:1 on #0f172a)
+     Equatorial (ฟ้า):    Light #0369a1 (5.93:1 on #fff) | Dark #38bdf8 (9.2:1 on #0f172a)
+     Ecliptic (เหลือง):    Light #854d0e (6.53:1 on #fff) | Dark #facc15 (12.6:1 on #0f172a)
+  */
+  --coord-horizon-light: #047857;
+  --coord-horizon-dark: #34d399;
+  --coord-horizon-soft-light: #ecfdf5;
+  --coord-horizon-soft-dark: #062f26;
+  --coord-horizon-border-light: #059669;
+  --coord-horizon-border-dark: #34d399;
+  --coord-horizon-on-solid-light: #ffffff;
+  --coord-horizon-on-solid-dark: #042f2e;
+
+  --coord-equatorial-light: #0369a1;
+  --coord-equatorial-dark: #38bdf8;
+  --coord-equatorial-soft-light: #f0f9ff;
+  --coord-equatorial-soft-dark: #08273e;
+  --coord-equatorial-border-light: #0284c7;
+  --coord-equatorial-border-dark: #38bdf8;
+  --coord-equatorial-on-solid-light: #ffffff;
+  --coord-equatorial-on-solid-dark: #082f49;
+
+  --coord-ecliptic-light: #854d0e;
+  --coord-ecliptic-dark: #facc15;
+  --coord-ecliptic-soft-light: #fefce8;
+  --coord-ecliptic-soft-dark: #2c2106;
+  --coord-ecliptic-border-light: #a16207;
+  --coord-ecliptic-border-dark: #facc15;
+  --coord-ecliptic-on-solid-light: #ffffff;
+  --coord-ecliptic-on-solid-dark: #1c1917;
+
+  /* Feedback colors (WCAG AA) */
+  --feedback-success-light: #047857;
+  --feedback-success-dark: #34d399;
+  --feedback-success-bg-light: #ecfdf5;
+  --feedback-success-bg-dark: #052e23;
+  --feedback-error-light: #b91c1c;
+  --feedback-error-dark: #f87171;
+  --feedback-error-bg-light: #fef2f2;
+  --feedback-error-bg-dark: #3b0d14;
+
+  /* Slider Track Tokens (≥ 3:1 contrast against surface) */
+  --slider-track-light: #788496;
+  --slider-track-dark: #64748b;
+
+  /* Scrollbar Tokens (≥ 3:1 thumb vs track & surface) */
+  --scrollbar-track-light: #e2e8f0;
+  --scrollbar-track-dark: #0f172a;
+  --scrollbar-thumb-light: #526075;
+  --scrollbar-thumb-dark: #64748b;
+
+  /* Default (Light) resolved tokens for browsers without light-dark() */
+  --bg-page: var(--bg-page-light);
+  --bg-surface: var(--bg-surface-light);
+  --bg-subtle: var(--bg-subtle-light);
+  --bg-elevated: var(--bg-elevated-light);
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+  --text-muted: var(--text-muted-light);
+  --border-default: var(--border-default-light);
+  --border-strong: var(--border-strong-light);
+
+  --coord-horizon: var(--coord-horizon-light);
+  --coord-horizon-soft: var(--coord-horizon-soft-light);
+  --coord-horizon-border: var(--coord-horizon-border-light);
+  --coord-horizon-on-solid: var(--coord-horizon-on-solid-light);
+
+  --coord-equatorial: var(--coord-equatorial-light);
+  --coord-equatorial-soft: var(--coord-equatorial-soft-light);
+  --coord-equatorial-border: var(--coord-equatorial-border-light);
+  --coord-equatorial-on-solid: var(--coord-equatorial-on-solid-light);
+
+  --coord-ecliptic: var(--coord-ecliptic-light);
+  --coord-ecliptic-soft: var(--coord-ecliptic-soft-light);
+  --coord-ecliptic-border: var(--coord-ecliptic-border-light);
+  --coord-ecliptic-on-solid: var(--coord-ecliptic-on-solid-light);
+
+  --feedback-success: var(--feedback-success-light);
+  --feedback-success-bg: var(--feedback-success-bg-light);
+  --feedback-error: var(--feedback-error-light);
+  --feedback-error-bg: var(--feedback-error-bg-light);
+
+  --slider-track: var(--slider-track-light);
+  --scrollbar-track: var(--scrollbar-track-light);
+  --scrollbar-thumb: var(--scrollbar-thumb-light);
+
+  /* Fallback for browsers without light-dark() when OS prefers dark */
+  @media (prefers-color-scheme: dark) {
+    --bg-page: var(--bg-page-dark);
+    --bg-surface: var(--bg-surface-dark);
+    --bg-subtle: var(--bg-subtle-dark);
+    --bg-elevated: var(--bg-elevated-dark);
+    --text-primary: var(--text-primary-dark);
+    --text-secondary: var(--text-secondary-dark);
+    --text-muted: var(--text-muted-dark);
+    --border-default: var(--border-default-dark);
+    --border-strong: var(--border-strong-dark);
+
+    --coord-horizon: var(--coord-horizon-dark);
+    --coord-horizon-soft: var(--coord-horizon-soft-dark);
+    --coord-horizon-border: var(--coord-horizon-border-dark);
+    --coord-horizon-on-solid: var(--coord-horizon-on-solid-dark);
+
+    --coord-equatorial: var(--coord-equatorial-dark);
+    --coord-equatorial-soft: var(--coord-equatorial-soft-dark);
+    --coord-equatorial-border: var(--coord-equatorial-border-dark);
+    --coord-equatorial-on-solid: var(--coord-equatorial-on-solid-dark);
+
+    --coord-ecliptic: var(--coord-ecliptic-dark);
+    --coord-ecliptic-soft: var(--coord-ecliptic-soft-dark);
+    --coord-ecliptic-border: var(--coord-ecliptic-border-dark);
+    --coord-ecliptic-on-solid: var(--coord-ecliptic-on-solid-dark);
+
+    --feedback-success: var(--feedback-success-dark);
+    --feedback-success-bg: var(--feedback-success-bg-dark);
+    --feedback-error: var(--feedback-error-dark);
+    --feedback-error-bg: var(--feedback-error-bg-dark);
+
+    --slider-track: var(--slider-track-dark);
+    --scrollbar-track: var(--scrollbar-track-dark);
+    --scrollbar-thumb: var(--scrollbar-thumb-dark);
+  }
+
+  /* Modern light-dark() automatically follows color-scheme (and <meta> overrides) */
+  @supports (color: light-dark(white, black)) {
+    --bg-page: light-dark(var(--bg-page-light), var(--bg-page-dark));
+    --bg-surface: light-dark(var(--bg-surface-light), var(--bg-surface-dark));
+    --bg-subtle: light-dark(var(--bg-subtle-light), var(--bg-subtle-dark));
+    --bg-elevated: light-dark(var(--bg-elevated-light), var(--bg-elevated-dark));
+    --text-primary: light-dark(var(--text-primary-light), var(--text-primary-dark));
+    --text-secondary: light-dark(var(--text-secondary-light), var(--text-secondary-dark));
+    --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
+    --border-default: light-dark(var(--border-default-light), var(--border-default-dark));
+    --border-strong: light-dark(var(--border-strong-light), var(--border-strong-dark));
+
+    --coord-horizon: light-dark(var(--coord-horizon-light), var(--coord-horizon-dark));
+    --coord-horizon-soft: light-dark(var(--coord-horizon-soft-light), var(--coord-horizon-soft-dark));
+    --coord-horizon-border: light-dark(var(--coord-horizon-border-light), var(--coord-horizon-border-dark));
+    --coord-horizon-on-solid: light-dark(var(--coord-horizon-on-solid-light), var(--coord-horizon-on-solid-dark));
+
+    --coord-equatorial: light-dark(var(--coord-equatorial-light), var(--coord-equatorial-dark));
+    --coord-equatorial-soft: light-dark(var(--coord-equatorial-soft-light), var(--coord-equatorial-soft-dark));
+    --coord-equatorial-border: light-dark(var(--coord-equatorial-border-light), var(--coord-equatorial-border-dark));
+    --coord-equatorial-on-solid: light-dark(var(--coord-equatorial-on-solid-light), var(--coord-equatorial-on-solid-dark));
+
+    --coord-ecliptic: light-dark(var(--coord-ecliptic-light), var(--coord-ecliptic-dark));
+    --coord-ecliptic-soft: light-dark(var(--coord-ecliptic-soft-light), var(--coord-ecliptic-soft-dark));
+    --coord-ecliptic-border: light-dark(var(--coord-ecliptic-border-light), var(--coord-ecliptic-border-dark));
+    --coord-ecliptic-on-solid: light-dark(var(--coord-ecliptic-on-solid-light), var(--coord-ecliptic-on-solid-dark));
+
+    --feedback-success: light-dark(var(--feedback-success-light), var(--feedback-success-dark));
+    --feedback-success-bg: light-dark(var(--feedback-success-bg-light), var(--feedback-success-bg-dark));
+    --feedback-error: light-dark(var(--feedback-error-light), var(--feedback-error-dark));
+    --feedback-error-bg: light-dark(var(--feedback-error-bg-light), var(--feedback-error-bg-dark));
+
+    --slider-track: light-dark(var(--slider-track-light), var(--slider-track-dark));
+    --scrollbar-track: light-dark(var(--scrollbar-track-light), var(--scrollbar-track-dark));
+    --scrollbar-thumb: light-dark(var(--scrollbar-thumb-light), var(--scrollbar-thumb-dark));
+  }
+
+  accent-color: var(--coord-equatorial);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Explicit class fallback for browsers without light-dark() when toggled via JS */
+html.dark {
+  --bg-page: var(--bg-page-dark);
+  --bg-surface: var(--bg-surface-dark);
+  --bg-subtle: var(--bg-subtle-dark);
+  --bg-elevated: var(--bg-elevated-dark);
+  --text-primary: var(--text-primary-dark);
+  --text-secondary: var(--text-secondary-dark);
+  --text-muted: var(--text-muted-dark);
+  --border-default: var(--border-default-dark);
+  --border-strong: var(--border-strong-dark);
+
+  --coord-horizon: var(--coord-horizon-dark);
+  --coord-horizon-soft: var(--coord-horizon-soft-dark);
+  --coord-horizon-border: var(--coord-horizon-border-dark);
+  --coord-horizon-on-solid: var(--coord-horizon-on-solid-dark);
+
+  --coord-equatorial: var(--coord-equatorial-dark);
+  --coord-equatorial-soft: var(--coord-equatorial-soft-dark);
+  --coord-equatorial-border: var(--coord-equatorial-border-dark);
+  --coord-equatorial-on-solid: var(--coord-equatorial-on-solid-dark);
+
+  --coord-ecliptic: var(--coord-ecliptic-dark);
+  --coord-ecliptic-soft: var(--coord-ecliptic-soft-dark);
+  --coord-ecliptic-border: var(--coord-ecliptic-border-dark);
+  --coord-ecliptic-on-solid: var(--coord-ecliptic-on-solid-dark);
+
+  --feedback-success: var(--feedback-success-dark);
+  --feedback-success-bg: var(--feedback-success-bg-dark);
+  --feedback-error: var(--feedback-error-dark);
+  --feedback-error-bg: var(--feedback-error-bg-dark);
+
+  --slider-track: var(--slider-track-dark);
+  --scrollbar-track: var(--scrollbar-track-dark);
+  --scrollbar-thumb: var(--scrollbar-thumb-dark);
+}
+
+html:not(.dark)[data-theme-mode="light"] {
+  --bg-page: var(--bg-page-light);
+  --bg-surface: var(--bg-surface-light);
+  --bg-subtle: var(--bg-subtle-light);
+  --bg-elevated: var(--bg-elevated-light);
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+  --text-muted: var(--text-muted-light);
+  --border-default: var(--border-default-light);
+  --border-strong: var(--border-strong-light);
+
+  --coord-horizon: var(--coord-horizon-light);
+  --coord-horizon-soft: var(--coord-horizon-soft-light);
+  --coord-horizon-border: var(--coord-horizon-border-light);
+  --coord-horizon-on-solid: var(--coord-horizon-on-solid-light);
+
+  --coord-equatorial: var(--coord-equatorial-light);
+  --coord-equatorial-soft: var(--coord-equatorial-soft-light);
+  --coord-equatorial-border: var(--coord-equatorial-border-light);
+  --coord-equatorial-on-solid: var(--coord-equatorial-on-solid-light);
+
+  --coord-ecliptic: var(--coord-ecliptic-light);
+  --coord-ecliptic-soft: var(--coord-ecliptic-soft-light);
+  --coord-ecliptic-border: var(--coord-ecliptic-border-light);
+  --coord-ecliptic-on-solid: var(--coord-ecliptic-on-solid-light);
+
+  --feedback-success: var(--feedback-success-light);
+  --feedback-success-bg: var(--feedback-success-bg-light);
+  --feedback-error: var(--feedback-error-light);
+  --feedback-error-bg: var(--feedback-error-bg-light);
+
+  --slider-track: var(--slider-track-light);
+  --scrollbar-track: var(--scrollbar-track-light);
+  --scrollbar-thumb: var(--scrollbar-thumb-light);
+}
+
+@media (pointer: coarse) {
+  :root {
+    --target-size: 44px;
+  }
+}
+
+/* ==========================================================================
+   Base Accessibility, Safe Areas & Typography Rules
+   ========================================================================== */
+
+html {
+  font-family: "Noto Sans Thai", "Sarabun", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  scroll-padding-top: calc(4.75rem + env(safe-area-inset-top, 0px));
+}
+
+body {
+  overflow-wrap: break-word;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  min-block-size: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+:where(a, code) {
+  overflow-wrap: anywhere;
+}
+
+:where(button, select, textarea, input:not([type="checkbox"], [type="radio"]), [role="button"], nav a) {
+  min-block-size: var(--target-size);
+  min-inline-size: var(--target-size);
+}
+
+:where(a:any-link, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2.5px solid var(--coord-equatorial);
+  outline-offset: 3px;
+}
+
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.skip-link:focus-visible {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  left: max(0.75rem, env(safe-area-inset-left, 0px));
+  z-index: 100;
+  padding: 0.65rem 1.1rem;
+  border-radius: 0.75rem;
+  background-color: var(--coord-equatorial);
+  color: var(--coord-equatorial-on-solid);
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+.site-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Container queries for adaptive cards and module workspace */
+.module-grid-container {
+  container: module-grid / inline-size;
+}
+
+@container module-grid (inline-size > 52rem) {
+  .module-workspace-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(19rem, 0.85fr);
+    align-items: start;
+    gap: 1.5rem;
+  }
+}
+
+/* ==========================================================================
+   Accessible Large Touch Range Slider (ControlPanel)
+   ========================================================================== */
+
+input[type="range"].celestia-slider {
+  --slider-track-size: 0.625rem;
+  --slider-thumb-size: 1.75rem;
+  --slider-track-radius: 999px;
+  --slider-thumb-radius: 50%;
+  --slider-track-color: var(--slider-track);
+  --slider-fill-color: var(--coord-equatorial);
+  --slider-thumb-color: var(--slider-fill-color);
+  --slider-thumb-ring: var(--bg-surface);
+  --slider-direction: to right;
+
+  /* Read min/max/value from attributes; JS syncs --control-value, --attr-min, --attr-max */
+  --attr-min: attr(min type(<number>), 0);
+  --attr-max: attr(max type(<number>), 100);
+  --control-value: attr(value type(<number>), 50);
+  --slider-progress: calc(
+    progress(var(--control-value), var(--attr-min), var(--attr-max)) * 100%
+  );
+
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 100%;
+  block-size: 2.75rem; /* Generous touch target area */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+@media (pointer: coarse) {
+  input[type="range"].celestia-slider {
+    --slider-track-size: 0.75rem;
+    --slider-thumb-size: 2.125rem;
+    block-size: 3rem;
+  }
+}
+
+input[type="range"].celestia-slider:dir(rtl) {
+  --slider-direction: to left;
+}
+
+@supports not (opacity: progress(1, 0, 100)) {
+  input[type="range"].celestia-slider {
+    --slider-progress: calc(
+      (var(--control-value) - var(--attr-min)) /
+        max(0.0001, (var(--attr-max) - var(--attr-min))) * 100%
+    );
+  }
+}
+
+/* WebKit/Blink — declared separately from Firefox */
+input[type="range"].celestia-slider::-webkit-slider-runnable-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(
+    var(--slider-direction),
+    var(--slider-fill-color) var(--slider-progress),
+    var(--slider-track-color) var(--slider-progress)
+  );
+}
+
+input[type="range"].celestia-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  margin-block-start: calc(
+    (var(--slider-track-size) - var(--slider-thumb-size)) / 2
+  );
+  border: 3px solid var(--slider-thumb-ring);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  transition: transform 120ms ease;
+}
+
+input[type="range"].celestia-slider:hover::-webkit-slider-thumb,
+input[type="range"].celestia-slider:active::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+
+/* Firefox — declared in separate rule blocks */
+input[type="range"].celestia-slider::-moz-range-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-track-color);
+}
+
+input[type="range"].celestia-slider::-moz-range-progress {
+  block-size: var(--slider-track-size);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-fill-color);
+}
+
+input[type="range"].celestia-slider::-moz-range-thumb {
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  border: 3px solid var(--slider-thumb-ring);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  transition: transform 120ms ease;
+}
+
+input[type="range"].celestia-slider:hover::-moz-range-thumb,
+input[type="range"].celestia-slider:active::-moz-range-thumb {
+  transform: scale(1.08);
+}
+
+input[type="range"].celestia-slider:focus-visible {
+  outline: 2.5px solid var(--slider-fill-color);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
+/* Slider Accent Variants */
+input[type="range"].celestia-slider[data-accent="horizon"] {
+  --slider-fill-color: var(--coord-horizon);
+}
+
+input[type="range"].celestia-slider[data-accent="equatorial"] {
+  --slider-fill-color: var(--coord-equatorial);
+}
+
+input[type="range"].celestia-slider[data-accent="ecliptic"] {
+  --slider-fill-color: var(--coord-ecliptic);
+}
+
+/* Numeric coordinate input alongside slider (prevents iOS zoom with >= 1rem) */
+.celestia-number-input {
+  font: inherit;
+  font-size: max(1rem, 1em);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  min-block-size: 44px;
+}
+
+.celestia-number-input[aria-invalid="true"] {
+  border-color: var(--feedback-error);
+  background-color: var(--feedback-error-bg);
+}
+
+/* Live comparison table highlight pulse when coordinate values change */
+@keyframes celestia-cell-flash {
+  0% {
+    box-shadow: inset 0 0 0 2px var(--coord-equatorial);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+.compare-row-changed {
+  animation: celestia-cell-flash 700ms ease-out;
+}
+
+/* Forced Colors Mode (Windows High Contrast) */
+@media (forced-colors: active) {
+  input[type="range"].celestia-slider::-webkit-slider-runnable-track,
+  input[type="range"].celestia-slider::-moz-range-track {
+    border: 1px solid CanvasText;
+  }
+
+  input[type="range"].celestia-slider::-webkit-slider-thumb,
+  input[type="range"].celestia-slider::-moz-range-thumb {
+    border: 2px solid ButtonText;
+    background: Highlight;
+  }
+
+  :where(a:any-link, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Legacy scrollbar fallback for older WebKit/Blink without scrollbar-color */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+    border: 3px solid var(--scrollbar-track);
+  }
+}

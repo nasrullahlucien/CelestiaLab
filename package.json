@@ -1,0 +1,24 @@
+{
+  "name": "celestialab",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CelestiaLab — เว็บแอปช่วยสอนวิชาโลก ดาราศาสตร์ และอวกาศ ม.6 เรื่องทรงกลมท้องฟ้า",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.174.0",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
+  }
+}

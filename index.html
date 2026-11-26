@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        var key = 'celestialab-theme';
+        var stored = null;
+        try {
+          stored = localStorage.getItem(key);
+        } catch (e) {}
+        var mode = stored === 'light' || stored === 'dark' ? stored : 'auto';
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) {
+          meta.setAttribute('content', mode === 'auto' ? 'light dark' : mode);
+        }
+        var prefersDark =
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = mode === 'dark' || (mode === 'auto' && prefersDark);
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.dataset.themeMode = mode;
+      })();
+    </script>
+    <title>CelestiaLab | ทรงกลมท้องฟ้า ม.6</title>
+    <meta
+      name="description"
+      content="CelestiaLab เว็บแอปเรียนรู้วิชาโลก ดาราศาสตร์ และอวกาศ ม.6 เรื่องทรงกลมท้องฟ้าและระบบพิกัดทางดาราศาสตร์แบบ 3 มิติ"
+    />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-canvas text-ink antialiased selection:bg-equatorial-soft selection:text-ink">
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
