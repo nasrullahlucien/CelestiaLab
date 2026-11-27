@@ -3678,78 +3678,102 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
 
   const captureScreenshot = () => {
     if (!renderer) return;
-    // Render synchronously right before copying WebGL canvas so image is never blank
-    controls.update();
-    renderCurrentFrame();
 
-    const srcCanvas = renderer.domElement;
-    const outW = srcCanvas.width;
-    const outH = srcCanvas.height;
-    if (outW <= 0 || outH <= 0) return;
+    // Render synchronously into a crisp 1:1 square (1200x1200 px) with zero distortion
+    const SQUARE_SIZE = 1200;
+    const origPixelRatio = renderer.getPixelRatio();
+
+    controls.update();
+    renderer.setPixelRatio(1);
+    renderer.setSize(SQUARE_SIZE, SQUARE_SIZE, false);
+
+    if (dualView && spaceView) {
+      const halfH = SQUARE_SIZE / 2;
+      spaceView.camera.aspect = SQUARE_SIZE / halfH;
+      spaceView.camera.updateProjectionMatrix();
+      camera.aspect = SQUARE_SIZE / halfH;
+      camera.updateProjectionMatrix();
+
+      renderer.setScissorTest(true);
+      // Top half: Space View
+      renderer.setViewport(0, halfH, SQUARE_SIZE, halfH);
+      renderer.setScissor(0, halfH, SQUARE_SIZE, halfH);
+      renderer.render(spaceView.scene, spaceView.camera);
+      // Bottom half: Local Horizon Dome
+      renderer.setViewport(0, 0, SQUARE_SIZE, halfH);
+      renderer.setScissor(0, 0, SQUARE_SIZE, halfH);
+      renderer.render(scene, camera);
+      renderer.setScissorTest(false);
+    } else {
+      camera.aspect = 1;
+      camera.updateProjectionMatrix();
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, SQUARE_SIZE, SQUARE_SIZE);
+      renderer.render(scene, camera);
+    }
 
     const outCanvas = document.createElement('canvas');
-    outCanvas.width = outW;
-    outCanvas.height = outH;
+    outCanvas.width = SQUARE_SIZE;
+    outCanvas.height = SQUARE_SIZE;
     const ctx = outCanvas.getContext('2d');
-    if (!ctx) return;
+    if (ctx) {
+      ctx.drawImage(renderer.domElement, 0, 0, SQUARE_SIZE, SQUARE_SIZE);
 
-    ctx.drawImage(srcCanvas, 0, 0, outW, outH);
+      // Subtle center divider line when capturing Dual View
+      if (dualView && spaceView) {
+        ctx.save();
+        ctx.strokeStyle = currentIsDark
+          ? 'rgba(148, 163, 184, 0.48)'
+          : 'rgba(100, 116, 139, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, SQUARE_SIZE / 2);
+        ctx.lineTo(SQUARE_SIZE, SQUARE_SIZE / 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
-    const dpr = Math.max(1, outW / Math.max(1, stage.clientWidth || outW));
+      // Bottom-right watermark: "CelestiaLab • ครูพี่นัท"
+      const wmText = 'CelestiaLab • ครูพี่นัท';
+      const fontSize = 24;
+      const padX = 20;
+      const padY = 11;
+      const margin = 22;
+      const radius = 14;
 
-    // If Dual View is active, draw divider line & captions on exported PNG too
-    if (dualView) {
-      const horiz = (stage.clientWidth || outW) >= 640;
       ctx.save();
+      ctx.font = `700 ${fontSize}px "Noto Sans Thai", system-ui, sans-serif`;
+      const textW = ctx.measureText(wmText).width;
+      const boxW = textW + padX * 2;
+      const boxH = fontSize + padY * 2;
+      const boxX = SQUARE_SIZE - boxW - margin;
+      const boxY = SQUARE_SIZE - boxH - margin;
+
+      ctx.fillStyle = currentIsDark
+        ? 'rgba(15, 23, 42, 0.8)'
+        : 'rgba(255, 255, 255, 0.86)';
       ctx.strokeStyle = currentIsDark
         ? 'rgba(148, 163, 184, 0.45)'
-        : 'rgba(100, 116, 139, 0.45)';
-      ctx.lineWidth = Math.max(1, Math.round(1.5 * dpr));
+        : 'rgba(100, 116, 139, 0.38)';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      if (horiz) {
-        ctx.moveTo(outW / 2, 0);
-        ctx.lineTo(outW / 2, outH);
-      } else {
-        ctx.moveTo(0, outH / 2);
-        ctx.lineTo(outW, outH / 2);
-      }
+      ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+      ctx.fill();
       ctx.stroke();
+
+      ctx.fillStyle = currentIsDark ? '#f8fafc' : '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(wmText, boxX + boxW / 2, boxY + boxH / 2 + 1);
       ctx.restore();
     }
 
-    // Bottom-right watermark: "CelestiaLab • ครูพี่นัท"
-    const wmText = 'CelestiaLab • ครูพี่นัท';
-    const fontSize = Math.max(13, Math.round(15 * dpr));
-    const padX = Math.round(13 * dpr);
-    const padY = Math.round(7 * dpr);
-    const margin = Math.round(14 * dpr);
-    const radius = Math.round(10 * dpr);
+    // Immediately restore live viewport & pixel ratio (zero visible flicker)
+    renderer.setPixelRatio(origPixelRatio);
+    handleResize();
+    renderCurrentFrame();
 
-    ctx.save();
-    ctx.font = `700 ${fontSize}px "Noto Sans Thai", system-ui, sans-serif`;
-    const textW = ctx.measureText(wmText).width;
-    const boxW = textW + padX * 2;
-    const boxH = fontSize + padY * 2;
-    const boxX = outW - boxW - margin;
-    const boxY = outH - boxH - margin;
-
-    ctx.fillStyle = currentIsDark
-      ? 'rgba(15, 23, 42, 0.78)'
-      : 'rgba(255, 255, 255, 0.84)';
-    ctx.strokeStyle = currentIsDark
-      ? 'rgba(148, 163, 184, 0.45)'
-      : 'rgba(100, 116, 139, 0.38)';
-    ctx.lineWidth = Math.max(1, Math.round(1.2 * dpr));
-    ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = currentIsDark ? '#f8fafc' : '#0f172a';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(wmText, boxX + boxW / 2, boxY + boxH / 2 + dpr * 0.5);
-    ctx.restore();
+    if (!ctx) return;
 
     const now = new Date();
     const pad2 = (n: number) => String(n).padStart(2, '0');
