@@ -200,10 +200,15 @@ export function createCompareModuleWorkspace(
   // =========================================================================
   // 1) 3D SkyScene (Compare Mode with all 3 overlaid systems + Focus Mode + LST Play)
   // =========================================================================
+  let setCompareLocked = (_locked: boolean) => {};
+
   const skyScene = createSkyScene({
     mode: 'compare',
     showLayerToggles: true,
     showControlsBar: true,
+    onLockChange: (locked) => {
+      setCompareLocked(locked);
+    },
     initialParams: {
       altitude: state.altitude,
       azimuth: state.azimuth,
@@ -576,6 +581,9 @@ export function createCompareModuleWorkspace(
       title: tabMeta[sysId].label,
       sliders: SOURCE_SLIDERS[sysId],
       initialValues: dispInit,
+      onLockChange: (locked) => {
+        setCompareLocked(locked);
+      },
       onChange: (vals) => {
         if (tryItButton.isPlaying()) {
           skyScene.stopDemo();
@@ -633,6 +641,9 @@ export function createCompareModuleWorkspace(
   const sharedPanel = createControlPanel({
     title: cui.sharedParamsHeading,
     sliders: mod.sliders,
+    onLockChange: (locked) => {
+      setCompareLocked(locked);
+    },
     initialValues: {
       latitude: state.latitude,
       lst: state.lst,
@@ -858,6 +869,19 @@ export function createCompareModuleWorkspace(
       }
     },
   });
+
+  // Wire unified lock state across 3D scene, all 3 source tabs, shared params, Earth map & presets
+  setCompareLocked = (locked: boolean) => {
+    skyScene.setCoordsLocked(locked);
+    sharedPanel.setLocked(locked);
+    for (const cp of sourcePanels.values()) {
+      cp.setLocked(locked);
+    }
+    earthMapPicker.element.classList.toggle('pointer-events-none', locked);
+    earthMapPicker.element.classList.toggle('opacity-60', locked);
+    presetGrid.classList.toggle('pointer-events-none', locked);
+    presetGrid.classList.toggle('opacity-60', locked);
+  };
 
   // Initial table fill without flash
   renderSummaryTable(false);

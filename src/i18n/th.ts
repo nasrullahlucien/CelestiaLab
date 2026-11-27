@@ -57,6 +57,9 @@ export interface TranslationDict {
     equatorialSceneHint: string;
     eclipticSceneHint: string;
     cameraReset: string;
+    lockCoords: string;
+    coordsLocked: string;
+    coordsLockedHint: string;
     sphereGridToggle: string;
     hideUndersideToggle: string;
     hideAllHelpers: string;
@@ -324,6 +327,9 @@ export const th: TranslationDict = {
     equatorialSceneHint: 'ลากดาวบนทรงกลมเพื่อปรับ RA/Dec • กดเล่นเพื่อหมุนฟ้าตามเวลาดาราคติ',
     eclipticSceneHint: 'ลากวัตถุบนทรงกลมเพื่อปรับ λ/β • ดวงอาทิตย์อยู่บนเส้นสุริยะวิถี (β = 0°) เสมอ',
     cameraReset: 'รีเซ็ตมุมกล้อง',
+    lockCoords: 'ล็อกพิกัด',
+    coordsLocked: 'ล็อกพิกัดอยู่',
+    coordsLockedHint: 'ล็อกพิกัดอยู่ — หมุนมุมกล้องได้อย่างอิสระโดยไม่โดนดาว',
     sphereGridToggle: 'เส้นโครงทรงกลม',
     hideUndersideToggle: 'ซ่อนครึ่งล่าง',
     hideAllHelpers: 'ซ่อนเส้นช่วยทั้งหมด',

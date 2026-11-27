@@ -644,6 +644,19 @@ export function createModulePage(mod: ModuleDefinition): PageHandle {
     let earthMapPicker: EarthMapPickerHandle | null = null;
     let sunTimeControls: SunTimeControlsHandle | null = null;
 
+    const setWorkspaceLocked = (locked: boolean) => {
+      skyScene.setCoordsLocked(locked);
+      controlPanel.setLocked(locked);
+      if (earthMapPicker) {
+        earthMapPicker.element.classList.toggle('pointer-events-none', locked);
+        earthMapPicker.element.classList.toggle('opacity-60', locked);
+      }
+      if (sunTimeControls) {
+        sunTimeControls.element.classList.toggle('pointer-events-none', locked);
+        sunTimeControls.element.classList.toggle('opacity-60', locked);
+      }
+    };
+
     // Extra Sun Motions state for Module 3 (not in ControlPanel sliders)
     let eclipticCalendarDay = initialValues.calendarDay ?? dayOffsetToCalendarDay(91);
     let eclipticSolarTime = initialValues.solarTime ?? 12;
@@ -748,6 +761,9 @@ export function createModulePage(mod: ModuleDefinition): PageHandle {
     controlPanel = createControlPanel({
       sliders: mod.sliders,
       initialValues,
+      onLockChange: (locked) => {
+        setWorkspaceLocked(locked);
+      },
       onChange: (nextValues, changedId) => {
         if (tryItButton.isPlaying()) {
           skyScene.stopDemo();
@@ -813,6 +829,9 @@ export function createModulePage(mod: ModuleDefinition): PageHandle {
       initialParams: initialValues,
       showLayerToggles: false,
       showControlsBar: true,
+      onLockChange: (locked) => {
+        setWorkspaceLocked(locked);
+      },
       onUserDrag: (draggedValues) => {
         if (tryItButton.isPlaying()) {
           tryItButton.setPlaying(false);

@@ -11,14 +11,18 @@ export interface ControlPanelOptions {
   title?: string;
   sliders: SliderSpec[];
   initialValues?: Record<string, number>;
+  showLockButton?: boolean;
   onChange: (values: Record<string, number>, changedId: string) => void;
   onReset?: (values: Record<string, number>) => void;
+  onLockChange?: (locked: boolean) => void;
 }
 
 export interface ControlPanelHandle {
   element: HTMLElement;
   getValues: () => Record<string, number>;
   setValues: (nextValues: Partial<Record<string, number>>, silent?: boolean) => void;
+  setLocked: (locked: boolean) => void;
+  isLocked: () => boolean;
   reset: () => void;
   destroy: () => void;
 }
@@ -89,7 +93,14 @@ function wrapCircular(val: number, min: number, max: number, step = 0.1): number
 }
 
 export function createControlPanel(options: ControlPanelOptions): ControlPanelHandle {
-  const { sliders, onChange, onReset } = options;
+  const {
+    sliders,
+    onChange,
+    onReset,
+    onLockChange,
+    showLockButton = true,
+  } = options;
+  let locked = false;
   const values: Record<string, number> = {};
   for (const spec of sliders) {
     const raw = options.initialValues?.[spec.id] ?? spec.defaultValue;
@@ -120,14 +131,43 @@ export function createControlPanel(options: ControlPanelOptions): ControlPanelHa
   heading.className = 'text-base font-semibold text-ink';
   heading.textContent = options.title ?? t.module.controlsTitle;
 
+  const headerActions = document.createElement('div');
+  headerActions.className = 'flex items-center gap-1.5';
+
+  let lockBtn: HTMLButtonElement | null = null;
+  const renderLockButton = () => {
+    if (!lockBtn) return;
+    lockBtn.setAttribute('aria-pressed', String(locked));
+    if (locked) {
+      lockBtn.className =
+        'inline-flex items-center gap-1.5 rounded-xl border border-ecliptic-border bg-ecliptic text-ecliptic-contrast px-3 py-1.5 text-xs font-bold shadow-sm transition-colors';
+      lockBtn.innerHTML = `${ICONS.lock('w-3.5 h-3.5 shrink-0')}<span>${t.module.coordsLocked}</span>`;
+    } else {
+      lockBtn.className =
+        'inline-flex items-center gap-1.5 rounded-xl border border-line bg-subtle px-3 py-1.5 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
+      lockBtn.innerHTML = `${ICONS.unlock('w-3.5 h-3.5 shrink-0')}<span>${t.module.lockCoords}</span>`;
+    }
+  };
+
+  if (showLockButton) {
+    lockBtn = document.createElement('button');
+    lockBtn.type = 'button';
+    lockBtn.dataset.action = 'toggle-panel-lock';
+    renderLockButton();
+    headerActions.appendChild(lockBtn);
+  }
+
   const resetBtn = document.createElement('button');
   resetBtn.type = 'button';
   resetBtn.className =
-    'inline-flex items-center gap-1.5 rounded-xl border border-line bg-subtle px-3 py-1.5 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
+    'inline-flex items-center gap-1.5 rounded-xl border border-line bg-subtle px-3 py-1.5 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors disabled:opacity-45 disabled:cursor-not-allowed';
   resetBtn.innerHTML = `${ICONS.reset('w-3.5 h-3.5')}<span>${t.module.controlsReset}</span>`;
+  headerActions.appendChild(resetBtn);
 
-  header.append(heading, resetBtn);
+  header.append(heading, headerActions);
   root.appendChild(header);
+
+  const lockableControls: Array<HTMLInputElement | HTMLButtonElement> = [resetBtn];
 
   const list = document.createElement('div');
   list.className = 'space-y-5';
@@ -288,7 +328,9 @@ export function createControlPanel(options: ControlPanelOptions): ControlPanelHa
     };
 
     // Slider input handler
+    lockableControls.push(rangeInput);
     rangeInput.addEventListener('input', () => {
+      if (locked) return;
       clearFeedback();
       const rawSliderVal = Number(rangeInput.value);
       const normalized =
@@ -375,6 +417,7 @@ export function createControlPanel(options: ControlPanelOptions): ControlPanelHa
         i18n.format(vt.increaseByOne, { label: labelText, unit: spec.unit })
       );
       incBtn.textContent = '+';
+      lockableControls.push(decBtn, numberInput, incBtn);
 
       feedbackEl = document.createElement('p');
       feedbackEl.id = feedbackId;
@@ -547,7 +590,23 @@ export function createControlPanel(options: ControlPanelOptions): ControlPanelHa
     }
   };
 
+  const applyLockedState = (nextLocked: boolean) => {
+    locked = nextLocked;
+    for (const el of lockableControls) {
+      el.disabled = locked;
+    }
+    list.classList.toggle('opacity-60', locked);
+    renderLockButton();
+  };
+
+  const handleLockToggle = () => {
+    applyLockedState(!locked);
+    onLockChange?.(locked);
+  };
+  lockBtn?.addEventListener('click', handleLockToggle);
+
   const reset = () => {
+    if (locked) return;
     const defaults: Record<string, number> = {};
     for (const spec of sliders) {
       defaults[spec.id] = spec.defaultValue;
@@ -563,9 +622,12 @@ export function createControlPanel(options: ControlPanelOptions): ControlPanelHa
     element: root,
     getValues: () => ({ ...values }),
     setValues: applyValues,
+    setLocked: applyLockedState,
+    isLocked: () => locked,
     reset,
     destroy: () => {
       resetBtn.removeEventListener('click', reset);
+      lockBtn?.removeEventListener('click', handleLockToggle);
     },
   };
 }

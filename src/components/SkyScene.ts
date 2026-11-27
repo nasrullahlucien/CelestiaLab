@@ -88,6 +88,7 @@ export interface SkySceneOptions {
     dayOfYear: number;
   }) => void;
   onEclipticViewChange?: (view: EclipticViewMode) => void;
+  onLockChange?: (locked: boolean) => void;
 }
 
 export interface SkySceneHandle {
@@ -100,6 +101,8 @@ export interface SkySceneHandle {
   setCompareFocus: (focus: CoordAccent | null) => void;
   setSiderealPlaying: (playing: boolean) => void;
   setEclipticView: (view: EclipticViewMode) => void;
+  setCoordsLocked: (locked: boolean) => void;
+  isCoordsLocked: () => boolean;
   setSunAnimation: (state: {
     playing: boolean;
     mode: SunAnimMode;
@@ -222,6 +225,7 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     onSiderealTick,
     onSunAnimTick,
     onEclipticViewChange,
+    onLockChange,
   } = options;
 
   const params: Record<string, number> = {
@@ -289,6 +293,9 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
   let sphereGridBtn: HTMLButtonElement | null = null;
   let hideUnderside = false;
   let hideUndersideBtn: HTMLButtonElement | null = null;
+  let coordsLocked = false;
+  let lockCoordsBtn: HTMLButtonElement | null = null;
+  let lockedOverlayBadge: HTMLDivElement | null = null;
 
   let eclipticView: EclipticViewMode = 'sunpath';
   let ecViewEclipticBtn: HTMLButtonElement | null = null;
@@ -456,6 +463,26 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     stylePill(sunMonthsBtn, sunMonthsEnabled);
   };
 
+  const renderLockCoordsButton = () => {
+    if (lockCoordsBtn) {
+      lockCoordsBtn.setAttribute('aria-pressed', String(coordsLocked));
+      if (coordsLocked) {
+        lockCoordsBtn.className =
+          'inline-flex items-center gap-1.5 rounded-lg border border-ecliptic-border bg-ecliptic text-ecliptic-contrast px-2.5 py-1 text-xs font-bold shadow-sm transition-colors';
+        lockCoordsBtn.innerHTML = `${ICONS.lock('w-3.5 h-3.5 shrink-0')}<span>${t.module.coordsLocked}</span>`;
+      } else {
+        lockCoordsBtn.className =
+          'inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
+        lockCoordsBtn.innerHTML = `${ICONS.unlock('w-3.5 h-3.5 shrink-0')}<span>${t.module.lockCoords}</span>`;
+      }
+    }
+    if (lockedOverlayBadge) {
+      lockedOverlayBadge.className = coordsLocked
+        ? 'pointer-events-none absolute bottom-2.5 left-2.5 z-10 inline-flex items-center gap-1.5 rounded-lg border border-ecliptic-border/80 bg-surface/90 px-2.5 py-1 text-[11px] font-semibold text-ecliptic backdrop-blur-sm shadow-sm'
+        : 'hidden';
+    }
+  };
+
   if (showControlsBar) {
     const topBar = document.createElement('div');
     topBar.className =
@@ -513,6 +540,11 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
       rightControls.appendChild(ecSwitch);
     }
 
+    lockCoordsBtn = document.createElement('button');
+    lockCoordsBtn.type = 'button';
+    lockCoordsBtn.dataset.action = 'toggle-lock-coords';
+    renderLockCoordsButton();
+
     hideUndersideBtn = document.createElement('button');
     hideUndersideBtn.type = 'button';
     hideUndersideBtn.dataset.action = 'toggle-hide-underside';
@@ -532,7 +564,7 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
       'inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
     resetCamBtn.innerHTML = `${ICONS.camera('w-3.5 h-3.5')}<span>${t.module.cameraReset}</span>`;
 
-    rightControls.append(hideUndersideBtn, sphereGridBtn, resetCamBtn);
+    rightControls.append(lockCoordsBtn, hideUndersideBtn, sphereGridBtn, resetCamBtn);
     topBar.append(title, rightControls);
     wrapper.appendChild(topBar);
   }
@@ -693,6 +725,13 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
   stage.setAttribute('role', 'region');
   stage.setAttribute('aria-label', t.module.sceneTitle);
   wrapper.appendChild(stage);
+
+  if (showControlsBar) {
+    lockedOverlayBadge = document.createElement('div');
+    lockedOverlayBadge.className = 'hidden';
+    lockedOverlayBadge.innerHTML = `${ICONS.lock('w-3.5 h-3.5 shrink-0')}<span>${t.module.coordsLockedHint}</span>`;
+    stage.appendChild(lockedOverlayBadge);
+  }
 
   if (isRotatingSkyMode) {
     const rs = t.module.rotatingSky;
@@ -1065,6 +1104,8 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
       setCompareFocus: () => {},
       setSiderealPlaying: () => {},
       setEclipticView: () => {},
+      setCoordsLocked: () => {},
+      isCoordsLocked: () => false,
       setSunAnimation: () => {},
       startDemo: (_onV, onDone) => onDone(),
       startSteppedDemo: (_s, _v, _sc, onDone) => onDone(),
@@ -2184,6 +2225,31 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     applyHideUnderside();
   });
 
+  const setCoordsLockedInternal = (nextLocked: boolean, notify = false) => {
+    coordsLocked = nextLocked;
+    if (coordsLocked) {
+      isDraggingStar = false;
+      activePointerId = null;
+      isHoveringStar = false;
+      controls.enabled = true;
+      starHaloMesh.scale.setScalar(1.0);
+      eqStarHaloMesh.scale.setScalar(1.0);
+      ecObjHaloMesh.scale.setScalar(1.0);
+      sunHaloMesh.scale.setScalar(1.0);
+      if (renderer) {
+        renderer.domElement.style.cursor = 'grab';
+      }
+    }
+    renderLockCoordsButton();
+    if (notify) {
+      onLockChange?.(coordsLocked);
+    }
+  };
+
+  lockCoordsBtn?.addEventListener('click', () => {
+    setCoordsLockedInternal(!coordsLocked, true);
+  });
+
   const setEclipticViewInternal = (nextView: EclipticViewMode) => {
     if (mode !== 'ecliptic') return;
     eclipticView = nextView;
@@ -2814,6 +2880,9 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
       return;
     }
 
+    // When coordinates are locked, all clicks/drags on the 3D scene orbit the camera freely
+    if (coordsLocked) return;
+
     updatePointerNdc(event.clientX, event.clientY);
     raycaster.setFromCamera(pointerNdc, camera);
 
@@ -2957,6 +3026,14 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     }
 
     if (event.pointerType === 'mouse') {
+      if (coordsLocked) {
+        if (isHoveringStar) {
+          isHoveringStar = false;
+          getActiveHaloMesh().scale.setScalar(1.0);
+        }
+        renderer.domElement.style.cursor = 'grab';
+        return;
+      }
       const hits = raycaster.intersectObject(getActiveHitMesh(), false);
       let hovered = hits.length > 0;
       let hoveredPattern = false;
@@ -3733,6 +3810,10 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     setEclipticView: (view) => {
       setEclipticViewInternal(view);
     },
+    setCoordsLocked: (locked) => {
+      setCoordsLockedInternal(locked, false);
+    },
+    isCoordsLocked: () => coordsLocked,
     setSunAnimation: (st) => {
       sunAnimPlaying = st.playing;
       sunAnimMode = st.mode;
