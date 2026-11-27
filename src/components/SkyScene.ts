@@ -296,6 +296,11 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
   let coordsLocked = false;
   let lockCoordsBtn: HTMLButtonElement | null = null;
   let lockedOverlayBadge: HTMLDivElement | null = null;
+  let isCssFullscreen = false;
+  let isNativeFullscreen = false;
+  let fullscreenBtn: HTMLButtonElement | null = null;
+  let captureBtn: HTMLButtonElement | null = null;
+  let captureFeedbackTimer: number | null = null;
 
   let eclipticView: EclipticViewMode = 'sunpath';
   let ecViewEclipticBtn: HTMLButtonElement | null = null;
@@ -483,6 +488,20 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     }
   };
 
+  const isExpandedView = () => isNativeFullscreen || isCssFullscreen;
+
+  const renderFullscreenButton = () => {
+    if (!fullscreenBtn) return;
+    const expanded = isExpandedView();
+    fullscreenBtn.setAttribute('aria-pressed', String(expanded));
+    fullscreenBtn.className = expanded
+      ? 'inline-flex items-center gap-1.5 rounded-lg border border-equatorial-border bg-equatorial text-equatorial-contrast px-2.5 py-1 text-xs font-bold shadow-sm transition-colors'
+      : 'inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
+    fullscreenBtn.innerHTML = expanded
+      ? `${ICONS.minimize('w-3.5 h-3.5 shrink-0')}<span>${t.module.fullscreenExit}</span>`
+      : `${ICONS.maximize('w-3.5 h-3.5 shrink-0')}<span>${t.module.fullscreenEnter}</span>`;
+  };
+
   if (showControlsBar) {
     const topBar = document.createElement('div');
     topBar.className =
@@ -557,6 +576,18 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     sphereGridBtn.innerHTML = `${ICONS.globe('w-3.5 h-3.5')}<span>${t.module.sphereGridToggle}</span>`;
     renderSphereGridButton();
 
+    captureBtn = document.createElement('button');
+    captureBtn.type = 'button';
+    captureBtn.dataset.action = 'capture-scene';
+    captureBtn.className =
+      'inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
+    captureBtn.innerHTML = `${ICONS.capture('w-3.5 h-3.5 shrink-0')}<span>${t.module.captureImage}</span>`;
+
+    fullscreenBtn = document.createElement('button');
+    fullscreenBtn.type = 'button';
+    fullscreenBtn.dataset.action = 'toggle-fullscreen';
+    renderFullscreenButton();
+
     const resetCamBtn = document.createElement('button');
     resetCamBtn.type = 'button';
     resetCamBtn.dataset.action = 'reset-camera';
@@ -564,7 +595,14 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
       'inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:border-line-strong hover:text-ink transition-colors';
     resetCamBtn.innerHTML = `${ICONS.camera('w-3.5 h-3.5')}<span>${t.module.cameraReset}</span>`;
 
-    rightControls.append(lockCoordsBtn, hideUndersideBtn, sphereGridBtn, resetCamBtn);
+    rightControls.append(
+      lockCoordsBtn,
+      hideUndersideBtn,
+      sphereGridBtn,
+      captureBtn,
+      fullscreenBtn,
+      resetCamBtn
+    );
     topBar.append(title, rightControls);
     wrapper.appendChild(topBar);
   }
@@ -3416,13 +3454,17 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
   if (isRotatingSkyMode) {
     dualViewSingleBtn?.addEventListener('click', () => {
       dualView = false;
-      stage.className = `relative w-full ${heightClass}`;
+      stage.className = isExpandedView()
+        ? 'relative w-full flex-1 min-h-0'
+        : `relative w-full ${heightClass}`;
       renderDualViewButtons();
       handleResize();
     });
     dualViewSplitBtn?.addEventListener('click', () => {
       dualView = true;
-      stage.className = 'relative w-full h-[540px] sm:h-[460px] lg:h-[500px]';
+      stage.className = isExpandedView()
+        ? 'relative w-full flex-1 min-h-0'
+        : 'relative w-full h-[540px] sm:h-[460px] lg:h-[500px]';
       renderDualViewButtons();
       handleResize();
       updateGeometryFromParams();
@@ -3518,6 +3560,246 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
   let rafId = 0;
   let lastTime = performance.now();
   let lastTickNotify = 0;
+
+  const renderCurrentFrame = () => {
+    if (!renderer) return;
+    const width = stage.clientWidth || 320;
+    const height = stage.clientHeight || 320;
+    if (dualView && spaceView) {
+      renderer.setScissorTest(true);
+      if (width >= 640) {
+        const halfW = Math.floor(width / 2);
+        renderer.setViewport(0, 0, halfW, height);
+        renderer.setScissor(0, 0, halfW, height);
+        renderer.render(spaceView.scene, spaceView.camera);
+
+        renderer.setViewport(halfW, 0, width - halfW, height);
+        renderer.setScissor(halfW, 0, width - halfW, height);
+        renderer.render(scene, camera);
+      } else {
+        const halfH = Math.floor(height / 2);
+        renderer.setViewport(0, height - halfH, width, halfH);
+        renderer.setScissor(0, height - halfH, width, halfH);
+        renderer.render(spaceView.scene, spaceView.camera);
+
+        renderer.setViewport(0, 0, width, height - halfH);
+        renderer.setScissor(0, 0, width, height - halfH);
+        renderer.render(scene, camera);
+      }
+      renderer.setScissorTest(false);
+    } else {
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, width, height);
+      renderer.render(scene, camera);
+    }
+  };
+
+  // =========================================================================
+  // Fullscreen (Native API + CSS Full-Viewport Fallback) & Watermarked Capture
+  // =========================================================================
+  let prevBodyOverflow = '';
+
+  const syncFullscreenLayout = () => {
+    const expanded = isExpandedView();
+    if (expanded) {
+      wrapper.className = isCssFullscreen
+        ? 'fixed inset-0 z-50 flex flex-col overflow-hidden bg-surface'
+        : 'relative flex h-[100dvh] w-screen flex-col overflow-hidden bg-surface';
+      stage.className = 'relative w-full flex-1 min-h-0';
+      if (isCssFullscreen) {
+        prevBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+      }
+    } else {
+      wrapper.className =
+        'relative overflow-hidden rounded-2xl border border-line bg-surface shadow-sm';
+      stage.className = dualView
+        ? 'relative w-full h-[540px] sm:h-[460px] lg:h-[500px]'
+        : `relative w-full ${heightClass}`;
+      document.body.style.overflow = prevBodyOverflow;
+    }
+    renderFullscreenButton();
+    handleResize();
+  };
+
+  const handleFullscreenChange = () => {
+    isNativeFullscreen = document.fullscreenElement === wrapper;
+    if (!isNativeFullscreen && !isCssFullscreen) {
+      syncFullscreenLayout();
+    } else if (isNativeFullscreen) {
+      isCssFullscreen = false;
+      syncFullscreenLayout();
+    }
+  };
+
+  const handleEscapeKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isCssFullscreen) {
+      isCssFullscreen = false;
+      syncFullscreenLayout();
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (isNativeFullscreen) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        isNativeFullscreen = false;
+        syncFullscreenLayout();
+      }
+      return;
+    }
+    if (isCssFullscreen) {
+      isCssFullscreen = false;
+      syncFullscreenLayout();
+      return;
+    }
+
+    const reqFs =
+      wrapper.requestFullscreen ||
+      (wrapper as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })
+        .webkitRequestFullscreen;
+    if (typeof reqFs === 'function') {
+      try {
+        await reqFs.call(wrapper);
+        isNativeFullscreen = document.fullscreenElement === wrapper;
+        if (!isNativeFullscreen) {
+          isCssFullscreen = true;
+        }
+        syncFullscreenLayout();
+        return;
+      } catch {
+        // Fall back smoothly to CSS full-viewport overlay (e.g., iOS Safari)
+      }
+    }
+    isCssFullscreen = true;
+    syncFullscreenLayout();
+  };
+
+  const captureScreenshot = () => {
+    if (!renderer) return;
+    // Render synchronously right before copying WebGL canvas so image is never blank
+    controls.update();
+    renderCurrentFrame();
+
+    const srcCanvas = renderer.domElement;
+    const outW = srcCanvas.width;
+    const outH = srcCanvas.height;
+    if (outW <= 0 || outH <= 0) return;
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = outW;
+    outCanvas.height = outH;
+    const ctx = outCanvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(srcCanvas, 0, 0, outW, outH);
+
+    const dpr = Math.max(1, outW / Math.max(1, stage.clientWidth || outW));
+
+    // If Dual View is active, draw divider line & captions on exported PNG too
+    if (dualView) {
+      const horiz = (stage.clientWidth || outW) >= 640;
+      ctx.save();
+      ctx.strokeStyle = currentIsDark
+        ? 'rgba(148, 163, 184, 0.45)'
+        : 'rgba(100, 116, 139, 0.45)';
+      ctx.lineWidth = Math.max(1, Math.round(1.5 * dpr));
+      ctx.beginPath();
+      if (horiz) {
+        ctx.moveTo(outW / 2, 0);
+        ctx.lineTo(outW / 2, outH);
+      } else {
+        ctx.moveTo(0, outH / 2);
+        ctx.lineTo(outW, outH / 2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Bottom-right watermark: "CelestiaLab • ครูพี่นัท"
+    const wmText = 'CelestiaLab • ครูพี่นัท';
+    const fontSize = Math.max(13, Math.round(15 * dpr));
+    const padX = Math.round(13 * dpr);
+    const padY = Math.round(7 * dpr);
+    const margin = Math.round(14 * dpr);
+    const radius = Math.round(10 * dpr);
+
+    ctx.save();
+    ctx.font = `700 ${fontSize}px "Noto Sans Thai", system-ui, sans-serif`;
+    const textW = ctx.measureText(wmText).width;
+    const boxW = textW + padX * 2;
+    const boxH = fontSize + padY * 2;
+    const boxX = outW - boxW - margin;
+    const boxY = outH - boxH - margin;
+
+    ctx.fillStyle = currentIsDark
+      ? 'rgba(15, 23, 42, 0.78)'
+      : 'rgba(255, 255, 255, 0.84)';
+    ctx.strokeStyle = currentIsDark
+      ? 'rgba(148, 163, 184, 0.45)'
+      : 'rgba(100, 116, 139, 0.38)';
+    ctx.lineWidth = Math.max(1, Math.round(1.2 * dpr));
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = currentIsDark ? '#f8fafc' : '#0f172a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(wmText, boxX + boxW / 2, boxY + boxH / 2 + dpr * 0.5);
+    ctx.restore();
+
+    const now = new Date();
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+    const filename = `celestialab-${mode}-${stamp}.png`;
+
+    const triggerDownload = (url: string, revokeAfter = false) => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      if (revokeAfter) {
+        window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+    };
+
+    if (typeof outCanvas.toBlob === 'function') {
+      outCanvas.toBlob((blob) => {
+        if (!blob) {
+          triggerDownload(outCanvas.toDataURL('image/png'));
+          return;
+        }
+        triggerDownload(URL.createObjectURL(blob), true);
+      }, 'image/png');
+    } else {
+      triggerDownload(outCanvas.toDataURL('image/png'));
+    }
+
+    if (captureBtn) {
+      captureBtn.innerHTML = `${ICONS.check('w-3.5 h-3.5 shrink-0 text-horizon')}<span>${t.module.captureSaved}</span>`;
+      if (captureFeedbackTimer !== null) {
+        window.clearTimeout(captureFeedbackTimer);
+      }
+      captureFeedbackTimer = window.setTimeout(() => {
+        if (captureBtn) {
+          captureBtn.innerHTML = `${ICONS.capture('w-3.5 h-3.5 shrink-0')}<span>${t.module.captureImage}</span>`;
+        }
+        captureFeedbackTimer = null;
+      }, 1800);
+    }
+  };
+
+  fullscreenBtn?.addEventListener('click', () => {
+    void toggleFullscreen();
+  });
+  captureBtn?.addEventListener('click', captureScreenshot);
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  window.addEventListener('keydown', handleEscapeKey);
 
   const animate = (now: number) => {
     rafId = window.requestAnimationFrame(animate);
@@ -3691,37 +3973,7 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     }
 
     controls.update();
-    if (renderer) {
-      const width = stage.clientWidth || 320;
-      const height = stage.clientHeight || 320;
-      if (dualView && spaceView) {
-        renderer.setScissorTest(true);
-        if (width >= 640) {
-          const halfW = Math.floor(width / 2);
-          renderer.setViewport(0, 0, halfW, height);
-          renderer.setScissor(0, 0, halfW, height);
-          renderer.render(spaceView.scene, spaceView.camera);
-
-          renderer.setViewport(halfW, 0, width - halfW, height);
-          renderer.setScissor(halfW, 0, width - halfW, height);
-          renderer.render(scene, camera);
-        } else {
-          const halfH = Math.floor(height / 2);
-          renderer.setViewport(0, height - halfH, width, halfH);
-          renderer.setScissor(0, height - halfH, width, halfH);
-          renderer.render(spaceView.scene, spaceView.camera);
-
-          renderer.setViewport(0, 0, width, height - halfH);
-          renderer.setScissor(0, 0, width, height - halfH);
-          renderer.render(scene, camera);
-        }
-        renderer.setScissorTest(false);
-      } else {
-        renderer.setScissorTest(false);
-        renderer.setViewport(0, 0, width, height);
-        renderer.render(scene, camera);
-      }
-    }
+    renderCurrentFrame();
   };
 
   rafId = window.requestAnimationFrame(animate);
@@ -3732,6 +3984,18 @@ export function createSkyScene(options: SkySceneOptions): SkySceneHandle {
     unsubTheme();
     resizeObserver.disconnect();
     resetCamBtn?.removeEventListener('click', resetCamera);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    window.removeEventListener('keydown', handleEscapeKey);
+    if (captureFeedbackTimer !== null) {
+      window.clearTimeout(captureFeedbackTimer);
+      captureFeedbackTimer = null;
+    }
+    if (isCssFullscreen) {
+      document.body.style.overflow = prevBodyOverflow;
+    }
+    if (document.fullscreenElement === wrapper) {
+      void document.exitFullscreen().catch(() => {});
+    }
 
     if (isDraggableMode && renderer) {
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown, {
